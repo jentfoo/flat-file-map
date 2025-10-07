@@ -1,17 +1,11 @@
 package ffmap
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/go-analyze/bulk"
 )
-
-// mapKeys extracts all keys from the provided map.
-func mapKeys[K comparable, V any](m map[K]V) []K {
-	result := make([]K, 0, len(m))
-	for k := range m {
-		result = append(result, k)
-	}
-	return result
-}
 
 // sliceUniqueUnion returns the union of all elements from the provided slices, removing duplicates.
 func sliceUniqueUnion[T comparable](slice [][]T) []T {
@@ -22,5 +16,5 @@ func sliceUniqueUnion[T comparable](slice [][]T) []T {
 		return slice[0] // assumed no duplications within a single slice
 	}
 
-	return mapKeys(bulk.SliceToSet(slice...))
+	return slices.Collect(maps.Keys(bulk.SliceToSet(slice...)))
 }

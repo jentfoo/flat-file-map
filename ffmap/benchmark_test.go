@@ -2,6 +2,7 @@ package ffmap
 
 import (
 	"bytes"
+	"iter"
 	"os"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ const stringRecordCount = 100
 const structRecordCount = 100
 const mapRecordCount = 100
 
-func addDefaultRecords(m *KeyValueCSV) {
+func addDefaultRecords(m MutableFFMap) {
 	for i := 1; i < intRecordCount; i++ {
 		if err := m.Set("int:"+strconv.Itoa(i), i); err != nil {
 			panic(err)
@@ -121,5 +122,71 @@ func BenchmarkCSVCommit(b *testing.B) {
 		if err := mOrig.commitTo(writer); err != nil {
 			panic(err)
 		}
+	}
+}
+
+// benchmarkTypedMap is a test wrapper that implements both iterator and callback approaches
+type benchmarkTypedMap[T any] struct {
+	ffm MutableFFMap
+}
+
+// All returns an iterator over all key-value pairs where values can be represented as type T
+func (btm *benchmarkTypedMap[T]) All() iter.Seq2[string, T] {
+	return func(yield func(string, T) bool) {
+		for _, key := range btm.ffm.KeySet() {
+			var val T
+			if ok, err := btm.ffm.Get(key, &val); ok && err == nil {
+				if !yield(key, val) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// Range calls the provided function for each key-value pair where values can be represented as type T
+func (btm *benchmarkTypedMap[T]) Range(fn func(string, T) bool) {
+	for _, key := range btm.ffm.KeySet() {
+		var val T
+		if ok, err := btm.ffm.Get(key, &val); ok && err == nil {
+			if !fn(key, val) {
+				return
+			}
+		}
+	}
+}
+
+func BenchmarkIteratorApproach(b *testing.B) {
+	mOrig := NewMemoryMap()
+	addDefaultRecords(mOrig)
+
+	typedMap := &benchmarkTypedMap[int]{ffm: mOrig}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var count int
+		for key, value := range typedMap.All() {
+			count++
+			_ = key
+			_ = value
+		}
+	}
+}
+
+func BenchmarkCallbackApproach(b *testing.B) {
+	mOrig := NewMemoryMap()
+	addDefaultRecords(mOrig)
+
+	typedMap := &benchmarkTypedMap[int]{ffm: mOrig}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var count int
+		typedMap.Range(func(key string, value int) bool {
+			count++
+			_ = key
+			_ = value
+			return true
+		})
 	}
 }

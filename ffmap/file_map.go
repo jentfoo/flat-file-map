@@ -4,6 +4,8 @@ package ffmap
 
 import (
 	"errors"
+	"iter"
+	"slices"
 )
 
 // EncodingError indicates that a value cannot be encoded for storage.
@@ -99,6 +101,8 @@ type FFMap interface {
 	ContainsKey(key string) bool
 	// KeySet returns all keys stored within the map.
 	KeySet() []string
+	// Keys returns an iterator of keys allowing `range` or `slices.Collect` to be used for iterating the map.
+	Keys() iter.Seq[string]
 }
 
 type MutableFFMap interface {
@@ -190,6 +194,11 @@ func (tfm *TypedFFMap[T]) ContainsKey(key string) bool {
 // KeySet will return all the keys stored within the map.
 func (tfm *TypedFFMap[T]) KeySet() []string {
 	return tfm.ffm.KeySet()
+}
+
+// Keys returns an iterator of keys allowing `range` or `slices.Collect` to be used for iterating the map.
+func (tfm *TypedFFMap[T]) Keys() iter.Seq[string] {
+	return tfm.ffm.Keys()
 }
 
 // Set stores the provided value into the map. If a value already exists, it will be replaced with the new value.

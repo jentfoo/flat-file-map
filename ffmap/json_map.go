@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"maps"
 	"math"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -493,7 +495,7 @@ func (kv *memoryJsonMap) KeySet() []string {
 	kv.rwLock.RLock()
 	defer kv.rwLock.RUnlock()
 
-	return mapKeys(kv.data)
+	return slices.Collect(maps.Keys(kv.data))
 }
 
 // Commit is a no-op for memoryJsonMap.
