@@ -80,7 +80,7 @@ func TestZeroValue(t *testing.T) {
 		{name: "complex64", kind: reflect.Complex64, expect: nil},
 		{name: "slice", kind: reflect.Slice, expect: nil},
 		{name: "map", kind: reflect.Map, expect: nil},
-		{name: "ptr", kind: reflect.Ptr, expect: nil},
+		{name: "ptr", kind: reflect.Pointer, expect: nil},
 		{name: "interface", kind: reflect.Interface, expect: nil},
 		{name: "struct", kind: reflect.Struct, expect: nil},
 		{name: "array", kind: reflect.Array, expect: nil},

@@ -3792,7 +3792,7 @@ func TestStructFieldUnion(t *testing.T) {
 			},
 			expectedFields: []string{"a"},
 			expectedKinds: map[string]reflect.Kind{
-				"a": reflect.Ptr,
+				"a": reflect.Pointer,
 			},
 		},
 		{
@@ -3815,7 +3815,7 @@ func TestStructFieldUnion(t *testing.T) {
 			},
 			expectedFields: []string{"a"},
 			expectedKinds: map[string]reflect.Kind{
-				"a": reflect.Ptr,
+				"a": reflect.Pointer,
 			},
 		},
 		{
@@ -3879,7 +3879,7 @@ func TestProjectStructValues(t *testing.T) {
 			item:   map[string]interface{}{},
 			fields: []string{"a"},
 			fieldKinds: map[string]reflect.Kind{
-				"a": reflect.Ptr,
+				"a": reflect.Pointer,
 			},
 			expectValues: []interface{}{nil},
 		},

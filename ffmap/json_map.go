@@ -24,6 +24,9 @@ func unmarshalUseNumber(data []byte, v interface{}) error {
 	return dec.Decode(v)
 }
 
+// nullValue is the JSON literal stored for nil slice elements.
+const nullValue = "null"
+
 // jsonRawMessageType identifies json.RawMessage so its raw JSON bytes are stored
 // verbatim instead of being Z85-encoded as opaque bytes.
 var jsonRawMessageType = reflect.TypeOf(json.RawMessage(nil))
@@ -92,7 +95,7 @@ func computeElementStructId(val reflect.Value) string {
 	switch elemType.Kind() {
 	case reflect.Struct:
 		return "[]" + computeStructId(elemType)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if elemType.Elem().Kind() == reflect.Struct {
 			return "[]" + computeStructId(elemType.Elem())
 		}
@@ -106,7 +109,7 @@ func computeElementStructId(val reflect.Value) string {
 				continue
 			}
 			inner := elem.Elem()
-			if inner.Kind() == reflect.Ptr {
+			if inner.Kind() == reflect.Pointer {
 				if inner.IsNil() {
 					continue
 				}
@@ -162,7 +165,7 @@ func encodeValue(value interface{}) (*dataItem, error) {
 	case []byte:
 		if v == nil {
 			// nil []byte stays in the JSON slice path so it round-trips as nil (distinct from empty)
-			return &dataItem{dataType: dataArraySlice, value: "null"}, nil
+			return &dataItem{dataType: dataArraySlice, value: nullValue}, nil
 		}
 		return &dataItem{dataType: dataBytes, value: base85.Z85.EncodeToString(v)}, nil
 	case string:
@@ -189,7 +192,7 @@ func encodeValue(value interface{}) (*dataItem, error) {
 		strVal = fmt.Sprintf("%v", v)
 	default:
 		val := reflect.ValueOf(value)
-		if val.Kind() == reflect.Ptr {
+		if val.Kind() == reflect.Pointer {
 			if val.IsNil() {
 				return nil, &EncodingError{Value: value, Message: "cannot encode nil pointer"}
 			}
@@ -200,7 +203,7 @@ func encodeValue(value interface{}) (*dataItem, error) {
 			// json.RawMessage keeps its raw JSON form so the file stays human-readable
 			if val.Type().Elem().Kind() == reflect.Uint8 && val.Type() != jsonRawMessageType {
 				if val.Kind() == reflect.Slice && val.IsNil() {
-					return &dataItem{dataType: dataArraySlice, value: "null"}, nil
+					return &dataItem{dataType: dataArraySlice, value: nullValue}, nil
 				}
 				var b []byte
 				if val.Kind() == reflect.Slice {
@@ -274,7 +277,7 @@ func stripZeroFields(v reflect.Value) interface{} {
 		return v.Interface()
 	} else if v.CanInterface() { // If the type implements json.Marshaler, use that
 		if marshaler, ok := v.Interface().(json.Marshaler); ok {
-			if rv := reflect.ValueOf(marshaler); rv.Kind() == reflect.Ptr && rv.IsNil() {
+			if rv := reflect.ValueOf(marshaler); rv.Kind() == reflect.Pointer && rv.IsNil() {
 				// fall through to normal processing
 			} else if jsonBytes, err := marshaler.MarshalJSON(); err == nil {
 				var unmarshaled interface{}
@@ -288,7 +291,7 @@ func stripZeroFields(v reflect.Value) interface{} {
 	// Handle pointer: if non-nil, and if its element is considered empty (for non-collection types)
 	// then return the pointer (preserving an explicit pointer to an empty or default value),
 	// otherwise process its element.
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
@@ -306,7 +309,7 @@ func stripZeroFields(v reflect.Value) interface{} {
 	if v.Kind() == reflect.Interface && !v.IsNil() {
 		elem := v.Elem()
 		elemKind := elem.Kind()
-		if elemKind == reflect.Struct || elemKind == reflect.Ptr ||
+		if elemKind == reflect.Struct || elemKind == reflect.Pointer ||
 			elemKind == reflect.Slice || elemKind == reflect.Map || elemKind == reflect.Array {
 			return stripZeroFields(elem)
 		}
@@ -340,7 +343,7 @@ func stripZeroFields(v reflect.Value) interface{} {
 			// If the field is anonymous (embedded) and is (or points to) a struct, flatten its fields.
 			if fieldType.Anonymous {
 				if fieldVal.Kind() == reflect.Struct ||
-					(fieldVal.Kind() == reflect.Ptr && !fieldVal.IsNil() && fieldVal.Elem().Kind() == reflect.Struct) {
+					(fieldVal.Kind() == reflect.Pointer && !fieldVal.IsNil() && fieldVal.Elem().Kind() == reflect.Struct) {
 					if m, ok := strippedValue.(map[string]interface{}); ok {
 						for k, v := range m {
 							if _, direct := directKeys[k]; !direct {
@@ -404,7 +407,7 @@ func stripZeroFields(v reflect.Value) interface{} {
 			mapKey := fmt.Sprint(key.Interface())
 			mapValue := v.MapIndex(key)
 			switch mapValue.Kind() {
-			case reflect.Ptr, reflect.Interface, reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
+			case reflect.Pointer, reflect.Interface, reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
 				out[mapKey] = stripZeroFields(mapValue)
 			default:
 				out[mapKey] = mapValue.Interface()

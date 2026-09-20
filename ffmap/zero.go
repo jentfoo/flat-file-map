@@ -24,13 +24,13 @@ func isZeroValue(v reflect.Value) bool {
 		return v.IsNil() // only consider nil to match prior pointer behavior
 	case reflect.Array:
 		return v.Len() == 0
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		return v.IsNil()
 	case reflect.Struct:
 		// If the struct implements json.Marshaler, check its output.
 		if v.CanInterface() {
 			if marshaler, ok := v.Interface().(json.Marshaler); ok {
-				if rv := reflect.ValueOf(marshaler); rv.Kind() == reflect.Ptr && rv.IsNil() {
+				if rv := reflect.ValueOf(marshaler); rv.Kind() == reflect.Pointer && rv.IsNil() {
 					return true
 				} else if jsonBytes, err := marshaler.MarshalJSON(); err == nil {
 					s := string(jsonBytes)

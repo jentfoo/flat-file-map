@@ -146,8 +146,8 @@ func (kv *KeyValueCSV) loadRecords(records [][]string) error {
 			} else if !sliceCtx.open {
 				return &ValidationError{Message: fmt.Sprintf("slice value record without preceding header, line: %v", i+1)}
 			}
-			if record[1] == "null" {
-				sliceCtx.entries = append(sliceCtx.entries, json.RawMessage("null"))
+			if record[1] == nullValue {
+				sliceCtx.entries = append(sliceCtx.entries, json.RawMessage(nullValue))
 				continue
 			}
 			var values []json.RawMessage
@@ -270,7 +270,7 @@ func (kv *KeyValueCSV) Commit() error {
 
 // structFieldUnion takes unmarshalled struct objects and returns the sorted union of field names
 // plus a per-field reflect.Kind used for zero-value substitution when an item omits a field.
-// Fields whose kinds differ across items become reflect.Ptr so encoded to null rather than a wrong-type zero.
+// Fields whose kinds differ across items become reflect.Pointer so encoded to null rather than a wrong-type zero.
 func structFieldUnion(items []map[string]interface{}) ([]string, map[string]reflect.Kind) {
 	fieldKinds := make(map[string]reflect.Kind)
 	for _, item := range items {
@@ -283,7 +283,7 @@ func structFieldUnion(items []map[string]interface{}) ([]string, map[string]refl
 			}
 			if current, ok := fieldKinds[name]; ok {
 				if zeroValue(current) != zeroValue(fieldType) {
-					fieldKinds[name] = reflect.Ptr
+					fieldKinds[name] = reflect.Pointer
 				}
 			} else {
 				fieldKinds[name] = fieldType
@@ -336,7 +336,7 @@ func prepareExplodedSlice(key string, item dataItem) (*deferredSlice, bool) {
 	parsed := make([]map[string]interface{}, len(rawEntries))
 	var nonNilCount int
 	for i, raw := range rawEntries {
-		if string(raw) == "null" {
+		if string(raw) == nullValue {
 			continue // parsed[i] stays nil
 		}
 		var m map[string]interface{}
@@ -461,7 +461,7 @@ func (kv *KeyValueCSV) commitTo(w io.Writer) error {
 		}
 		for _, m := range ds.parsed {
 			if m == nil {
-				if err := writer.Write([]string{strconv.Itoa(dataArraySliceValue), "null"}); err != nil {
+				if err := writer.Write([]string{strconv.Itoa(dataArraySliceValue), nullValue}); err != nil {
 					return err
 				}
 				continue
